@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crucipuzzle di storia</title>
+<style>
+:root{--ink:#203047;--blue:#2457a7;--pale:#eef4ff;--gold:#f2c14e;--green:#237a57;--red:#b83a3a;--line:#d6deea}
+*{box-sizing:border-box}
+body{margin:0;background:#f4f7fb;color:var(--ink);font-family:Arial,Helvetica,sans-serif;line-height:1.45}
+header{background:linear-gradient(120deg,#173a70,#2d69b4);color:white;padding:24px 18px}
+header .wrap,main{max-width:1100px;margin:auto}
+h1{margin:0 0 6px;font-size:clamp(1.6rem,4vw,2.25rem)}
+header p{margin:0;opacity:.95}
+main{padding:18px}
+.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:18px;margin:0 0 16px;box-shadow:0 3px 12px #19345a0a}
+h2{font-size:1.25rem;margin:0 0 12px}
+h3{font-size:1.05rem;margin:12px 0 8px}
+label{display:block;font-weight:700;margin:10px 0 5px}
+input,textarea,select,button{font:inherit}
+input[type=text],textarea,select{width:100%;padding:10px;border:1px solid #bdc9d9;border-radius:8px;background:#fff;color:var(--ink)}
+textarea{min-height:86px;resize:vertical}
+button{border:0;border-radius:9px;padding:10px 15px;cursor:pointer;font-weight:700}
+button.primary{background:var(--blue);color:white}
+button.secondary{background:var(--pale);color:var(--blue);border:1px solid #cad9f3}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #f2c14e;outline-offset:2px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.small{font-size:.92rem;color:#52627a}
+.notice{background:#fff8df;border-left:4px solid var(--gold);padding:10px 12px;border-radius:7px;margin:10px 0}
+.entry{display:grid;grid-template-columns:1fr 1.5fr auto;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid #e6ebf2}
+.entry:last-child{border-bottom:0}
+.entry button{background:#fff0f0;color:var(--red);padding:8px 10px}
+.grid-wrap{overflow:auto;padding:5px}
+.grid{display:grid;gap:3px;justify-content:start;touch-action:none;user-select:none}
+.cell{width:clamp(24px,4.4vw,36px);height:clamp(24px,4.4vw,36px);display:grid;place-items:center;background:#f3f6fb;border:1px solid #dce4ef;border-radius:5px;font-weight:700;font-size:clamp(.75rem,2.5vw,.98rem);cursor:pointer;padding:0}
+.cell.selected{background:#ffe69a;border-color:#c58b00}
+.cell.found{background:#c9f0dd;border-color:#62b78f;color:#145a3d}
+.words{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
+.wordcard{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fbfcff}
+.wordcard.done{border-color:#79c6a3;background:#effbf5}
+.wordcard strong{display:block;letter-spacing:.04em}
+.wordcard p{margin:5px 0 0;font-size:.92rem}
+.status{font-weight:700;margin-top:10px}
+.hidden{display:none!important}
+footer{max-width:1100px;margin:auto;padding:0 18px 25px;color:#617087;font-size:.88rem}
+@media(max-width:650px){main{padding:10px}.panel{padding:13px}.entry{grid-template-columns:1fr}.entry button{justify-self:start}}
+@media print{header{background:white;color:black;padding:10px}body{background:white}.panel{box-shadow:none;break-inside:avoid}.setup,.actions,.no-print{display:none!important}main{max-width:none;padding:0}.cell{border:1px solid #aaa;background:white!important;color:black!important}.grid-wrap{overflow:visible}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>Crucipuzzle di storia</h1>
+<p>Leggi il testo, recupera le parole importanti e mettiti alla prova con il crucipuzzle.</p>
+</div></header>
+<main>
+<section class="panel setup">
+<h2>1. Prepara l'esercizio</h2>
+<p class="small">Inserisci il testo di ripasso e poi aggiungi le parole da memorizzare con una definizione o una domanda. L'app non contiene un argomento storico preimpostato: puoi adattarla a qualsiasi lezione.</p>
+<label for="title">Titolo dell'esercizio</label>
+<input id="title" type="text" value="Ripasso di storia">
+<label for="sourceText">Testo riassuntivo di storia (facoltativo)</label>
+<textarea id="sourceText" placeholder="Incolla qui il testo che gli studenti devono leggere e comprendere..."></textarea>
+<label for="mode">Modalità delle domande</label>
+<select id="mode">
+<option value="definitions">Definizioni: trova il termine corretto</option>
+<option value="complete">Frasi da completare: trova la parola mancante</option>
+<option value="choices">Scelta multipla: leggi la domanda e scegli la risposta</option>
+</select>
+<div class="notice">Inserisci almeno 3 parole. Usa termini brevi o composti senza spazi: l'app rimuove automaticamente spazi e accenti nella griglia.</div>
+<div id="entries"></div>
+<div class="actions">
+<button class="secondary" id="addBtn">+ Aggiungi parola</button>
+<button class="primary" id="generateBtn">Crea il crucipuzzle</button>
+<button class="secondary" id="demoBtn">Carica esempio dimostrativo</button>
+</div>
+<p class="small">Per la modalità “Scelta multipla”, scrivi le opzioni nella definizione, separate da punto e virgola; indica la risposta corretta come primo elemento. Esempio: “Roma; Atene; Sparta”.</p>
+</section>
+
+<section class="panel hidden" id="studentArea">
+<div class="actions no-print" style="justify-content:space-between">
+<button class="secondary" id="backBtn">← Modifica esercizio</button>
+<button class="secondary" onclick="window.print()">Stampa esercizio</button>
+</div>
+<h2 id="exerciseTitle">Ripasso di storia</h2>
+<div id="reading" class="hidden">
+<h3>Leggi il testo</h3><div id="readingText"></div>
+</div>
+<h3 id="taskHeading">Trova le parole nella griglia</h3>
+<p id="instructions" class="small">Seleziona una parola nella griglia: clicca la prima lettera e poi l'ultima. Le parole possono essere orizzontali, verticali o diagonali, anche al contrario.</p>
+<div class="grid-wrap"><div id="grid" class="grid" aria-label="Griglia del crucipuzzle"></div></div>
+<div class="actions no-print">
+<button class="secondary" id="clearBtn">Annulla selezione</button>
+<button class="secondary" id="hintBtn">Mostra un indizio</button>
+<button class="primary" id="checkBtn">Controlla parole trovate</button>
+</div>
+<div class="status" id="status" aria-live="polite"></div>
+<h3 id="clueHeading">Domande e definizioni</h3>
+<div class="words" id="clues"></div>
+<div class="actions no-print">
+<button class="secondary" id="revealBtn">Mostra soluzioni</button>
+<button class="secondary" id="newGridBtn">Rigenera griglia</button>
+</div>
+<div id="solutions" class="hidden"></div>
+</section>
+</main>
+<footer>Strumento didattico modificabile per il ripasso: comprensione del testo, recupero delle informazioni, memorizzazione di termini e definizioni. Le risposte e il testo sono inseriti dall'insegnante.</footer>
+<script>
+const $=id=>document.getElementById(id);
+let entries=[], puzzle=[], size=13, found=new Set(), selectedStart=null, dragEnd=null, pointerDown=false, activeWords=[], lastHint=0;
+function cleanWord(s){return (s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
+function addEntry(term='', clue=''){
+ entries.push({term,clue});
+ renderEntries();
+}
+function renderEntries(){
+ const root=$('entries');root.innerHTML='';
+ entries.forEach((e,i)=>{
+  const row=document.createElement('div');row.className='entry';
+  const a=document.createElement('div');const la=document.createElement('label');la.textContent='Parola '+(i+1);const inp=document.createElement('input');inp.type='text';inp.value=e.term;inp.placeholder='Es. RINASCIMENTO';inp.addEventListener('input',()=>entries[i].term=inp.value);a.append(la,inp);
+  const b=document.createElement('div');const lb=document.createElement('label');lb.textContent='Domanda, definizione o frase';const ta=document.createElement('textarea');ta.value=e.clue;ta.placeholder='Scrivi un indizio per ricordare il termine…';ta.addEventListener('input',()=>entries[i].clue=ta.value);b.append(lb,ta);
+  const del=document.createElement('button');del.textContent='Elimina';del.type='button';del.onclick=()=>{entries.splice(i,1);renderEntries()};
+  row.append(a,b,del);root.append(row);
+ });
+}
+function loadDemo(){
+ $('title').value='Esempio dimostrativo: civiltà antiche';
+ $('sourceText').value='Le civiltà antiche si svilupparono spesso vicino ai fiumi, che fornivano acqua e rendevano fertile il terreno. In Egitto il Nilo era fondamentale per l’agricoltura. In Mesopotamia si svilupparono importanti città vicino al Tigri e all’Eufrate. Le prime forme di scrittura permisero di registrare informazioni e scambi.';
+ $('mode').value='definitions';
+ entries=[
+ {term:'NILO',clue:'Il fiume fondamentale per l’antico Egitto.'},
+ {term:'SCRITTURA',clue:'Permetteva di registrare informazioni e scambi.'},
+ {term:'MESOPOTAMIA',clue:'Regione in cui si trovavano il Tigri e l’Eufrate.'},
+ {term:'AGRICOLTURA',clue:'Attività favorita dai terreni resi fertili dai fiumi.'},
+ {term:'FIUME',clue:'Corso d’acqua vicino al quale si svilupparono molte civiltà.'}
+ ];renderEntries();
+}
+function generate(){
+ const cleaned=entries.map((e,i)=>({term:e.term.trim(),word:cleanWord(e.term),clue:e.clue.trim(),id:i})).filter(e=>e.word.length>=2);
+ if(cleaned.length<3){alert('Inserisci almeno 3 parole di almeno 2 lettere.');return}
+ if(cleaned.some(e=>e.word.length>18)){alert('Una parola supera 18 caratteri. Usa un termine più breve.');return}
+ activeWords=cleaned;found=new Set();size=Math.max(13,Math.min(18,Math.max(...cleaned.map(x=>x.word.length))+2));
+ let built=false;
+ for(let attempt=0;attempt<50&&!built;attempt++){
+  puzzle=Array.from({length:size},()=>Array(size).fill(''));
+  built=true;
+  const sorted=[...cleaned].sort((a,b)=>b.word.length-a.word.length);
+  for(const item of sorted){
+   let placed=false;
+   for(let k=0;k<300&&!placed;k++){
+    const dirs=[[0,1],[1,0],[1,1],[-1,1],[0,-1],[-1,0],[-1,-1],[1,-1]];
+    const [dr,dc]=dirs[Math.floor(Math.random()*dirs.length)];
+    const r=Math.floor(Math.random()*size),c=Math.floor(Math.random()*size);
+    const er=r+dr*(item.word.length-1),ec=c+dc*(item.word.length-1);
+    if(er<0||er>=size||ec<0||ec>=size)continue;
+    let ok=true;for(let j=0;j<item.word.length;j++){const old=puzzle[r+dr*j][c+dc*j];if(old&&old!==item.word[j]){ok=false;break}}
+    if(ok){item.cells=[];for(let j=0;j<item.word.length;j++){const rr=r+dr*j,cc=c+dc*j;puzzle[rr][cc]=item.word[j];item.cells.push([rr,cc])}placed=true}
+   }
+   if(!placed){built=false;break}
+  }
+ }
+ if(!built){alert('Non sono riuscito a creare la griglia. Prova con meno parole o termini più brevi.');return}
+ for(let r=0;r<size;r++)for(let c=0;c<size;c++)if(!puzzle[r][c])puzzle[r][c]='ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random()*26)];
+ $('studentArea').classList.remove('hidden');$('exerciseTitle').textContent=$('title').value.trim()||'Crucipuzzle di storia';
+ const text=$('sourceText').value.trim();$('reading').classList.toggle('hidden',!text);$('readingText').textContent=text;
+ renderGrid();renderClues();$('solutions').classList.add('hidden');$('solutions').innerHTML='';$('status').textContent='Parole trovate: 0 di '+activeWords.length;
+ $('studentArea').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function renderGrid(){
+ const root=$('grid');root.innerHTML='';root.style.gridTemplateColumns=`repeat(${size}, max-content)`;
+ for(let r=0;r<size;r++)for(let c=0;c<size;c++){
+  const btn=document.createElement('button');btn.type='button';btn.className='cell';btn.textContent=puzzle[r][c];btn.dataset.r=r;btn.dataset.c=c;btn.setAttribute('aria-label',`Riga ${r+1}, colonna ${c+1}, ${puzzle[r][c]}`);
+  btn.addEventListener('pointerdown',e=>{e.preventDefault();pointerDown=true;selectedStart=[r,c];dragEnd=[r,c];highlightSelection()});
+  btn.addEventListener('pointerenter',()=>{if(pointerDown){dragEnd=[r,c];highlightSelection()}});
+  btn.addEventListener('pointerup',()=>{if(pointerDown){pointerDown=false;dragEnd=[r,c];selectWord()}});
+  btn.addEventListener('click',()=>{if(!selectedStart){selectedStart=[r,c];highlightSelection()}else{dragEnd=[r,c];selectWord()}});
+  root.append(btn);
+ }
+ document.onpointerup=()=>{if(pointerDown&&selectedStart&&dragEnd){pointerDown=false;selectWord()}};
+}
+function cellEl(r,c){return $('grid').querySelector(`[data-r="${r}"][data-c="${c}"]`)}
+function highlightSelection(){
+ $('grid').querySelectorAll('.cell').forEach(x=>x.classList.remove('selected'));
+ if(!selectedStart||!dragEnd)return;
+ const [r1,c1]=selectedStart,[r2,c2]=dragEnd,dr=Math.sign(r2-r1),dc=Math.sign(c2-c1);
+ if(!(r1===r2||c1===c2||Math.abs(r2-r1)===Math.abs(c2-c1)))return;
+ let r=r1,c=c1;for(let i=0;i<size;i++){const el=cellEl(r,c);if(el)el.classList.add('selected');if(r===r2&&c===c2)break;r+=dr;c+=dc}
+}
+function selectWord(){
+ if(!selectedStart||!dragEnd)return;
+ const [r1,c1]=selectedStart,[r2,c2]=dragEnd,dr=Math.sign(r2-r1),dc=Math.sign(c2-c1);
+ if(!(r1===r2||c1===c2||Math.abs(r2-r1)===Math.abs(c2-c1))){$('status').textContent='Seleziona una linea orizzontale, verticale o diagonale.';selectedStart=null;dragEnd=null;highlightSelection();return}
+ let s='',cells=[],r=r1,c=c1;
+ for(let i=0;i<size;i++){s+=puzzle[r][c];cells.push([r,c]);if(r===r2&&c===c2)break;r+=dr;c+=dc}
+ const rev=s.split('').reverse().join('');
+ const match=activeWords.find(w=>(w.word===s||w.word===rev)&&!found.has(w.id));
+ if(match){found.add(match.id);match.cells.forEach(([rr,cc])=>cellEl(rr,cc)?.classList.add('found'));renderClues();$('status').textContent=`Bravo! Hai trovato “${match.term}”. Parole trovate: ${found.size} di ${activeWords.length}.`;if(found.size===activeWords.length)$('status').textContent='Complimenti! Hai trovato tutte le parole.'}
+ else if(activeWords.some(w=>w.word===s||w.word===rev))$('status').textContent='Questa parola è già stata trovata.';
+ else $('status').textContent='Questa selezione non corrisponde a una parola. Riprova.';
+ selectedStart=null;dragEnd=null;highlightSelection();
+}
+function renderClues(){
+ const root=$('clues');root.innerHTML='';const mode=$('mode').value;
+ activeWords.forEach(w=>{
+  const card=document.createElement('div');card.className='wordcard'+(found.has(w.id)?' done':'');
+  if(mode==='choices'){
+   const q=document.createElement('p');q.textContent=w.clue||'Scegli il termine corretto:';card.append(q);
+   const opts=(w.clue.includes(';')?w.clue.split(';').map(s=>s.trim()):[w.term,'Altro termine','Nessuna delle risposte']);
+   const sel=document.createElement('select');sel.innerHTML='<option value="">Scegli una risposta…</option>';
+   [...new Set(opts)].sort(()=>Math.random()-.5).forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;sel.append(op)});
+   sel.addEventListener('change',()=>{if(cleanWord(sel.value)===w.word){found.add(w.id);card.classList.add('done');sel.disabled=true;$('status').textContent=`Risposta corretta. Risposte corrette: ${found.size} di ${activeWords.length}.`}else if(sel.value){$('status').textContent='Non è la risposta corretta. Riprova.'}});
+   if(found.has(w.id))sel.disabled=true;card.append(sel);
+  }else{
+   const p=document.createElement('p');p.textContent=w.clue||'Trova il termine nella griglia.';card.append(p);
+   const answer=document.createElement('strong');answer.textContent=found.has(w.id)?w.term:'__________';card.prepend(answer);
+  }
+  root.append(card);
+ });
+}
+$('addBtn').onclick=()=>addEntry();
+$('generateBtn').onclick=generate;
+$('demoBtn').onclick=loadDemo;
+$('backBtn').onclick=()=>{$('studentArea').classList.add('hidden');document.querySelector('.setup').scrollIntoView({behavior:'smooth'})};
+$('clearBtn').onclick=()=>{selectedStart=null;dragEnd=null;highlightSelection();$('status').textContent='Selezione annullata.'};
+$('checkBtn').onclick=()=>{$('status').textContent=`Hai trovato ${found.size} parole su ${activeWords.length}.`};
+$('hintBtn').onclick=()=>{
+ const remaining=activeWords.filter(w=>!found.has(w.id));if(!remaining.length){$('status').textContent='Hai già trovato tutte le parole!';return}
+ const w=remaining[lastHint++%remaining.length];$('status').textContent=`Indizio: “${w.clue||'Trova questa parola'}” — la parola inizia con ${w.word[0]} e ha ${w.word.length} lettere.`;
+};
+$('revealBtn').onclick=()=>{
+ const box=$('solutions');box.classList.toggle('hidden');
+ if(!box.classList.contains('hidden')){box.innerHTML='<h3>Soluzioni</h3>'+activeWords.map(w=>`<p><strong>${escapeHtml(w.term)}</strong> — ${escapeHtml(w.clue)}</p>`).join('');}
+};
+$('newGridBtn').onclick=generate;
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+addEntry('NILO','Il fiume fondamentale per l’antico Egitto.');
+addEntry('SCRITTURA','Permetteva di registrare informazioni e scambi.');
+addEntry('MESOPOTAMIA','Regione in cui si trovavano il Tigri e l’Eufrate.');
+</script>
+</body>
+</html>
