@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Missione Digitazione e Puntatore</title>
+<style>
+:root{--bg:#f3f6fb;--card:#fff;--ink:#17243a;--muted:#52627a;--blue:#2457c5;--blue2:#e8efff;--green:#16794b;--line:#d7dfeb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1000px;margin:auto;padding:22px}h1{font-size:clamp(1.8rem,4vw,2.5rem);margin:.2em 0}h2{font-size:1.35rem;margin:.2em 0 .7em}p{margin:.35em 0 1em}.muted{color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 4px 18px #1a31500a}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.row>*{flex:1;min-width:180px}
+label{display:block;font-weight:650;margin-bottom:6px}input,select,button{font:inherit}
+input,select{width:100%;padding:12px;border:1px solid #b9c6d9;border-radius:10px;background:white;color:var(--ink)}
+button{border:0;border-radius:12px;padding:13px 18px;background:var(--blue);color:white;font-weight:700;cursor:pointer}
+button.secondary{background:var(--blue2);color:var(--ink);border:1px solid #cbd8f7}button:disabled{opacity:.45;cursor:not-allowed}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.tabs button{flex:1;min-width:210px}.tabs button[aria-pressed=true]{outline:3px solid #91adee;background:#163f9f}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}.stat{background:#f7f9fd;border:1px solid var(--line);border-radius:14px;padding:12px}.stat strong{display:block;font-size:1.55rem;font-variant-numeric:tabular-nums}.stat span{font-size:.9rem;color:var(--muted)}
+.timer{font-size:2.2rem;font-weight:800;font-variant-numeric:tabular-nums}#prompt{font-size:clamp(1.5rem,4vw,2.2rem);font-weight:800;letter-spacing:.04em;background:#f7f9fd;border:1px dashed #9eafd0;padding:20px;border-radius:14px;text-align:center}
+#typingInput{font-size:1.3rem;margin-top:10px}#clickArea{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;min-height:180px}
+.target{min-height:65px;background:#edf2fb;color:#243858;border:2px solid #c6d3e8;font-size:1.5rem;border-radius:14px}
+.target.active{background:#ffdf78;border-color:#d69c16;color:#352400}
+.hidden{display:none!important}.report{white-space:pre-wrap;background:#f7f9fd;padding:16px;border-radius:12px;border:1px solid var(--line)}
+.notice{background:#f7f9fd;border-left:4px solid #7797d8;padding:12px;border-radius:8px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}footer{font-size:.9rem;color:var(--muted);padding:10px 2px}
+@media(max-width:600px){main{padding:12px}.card{padding:15px}#clickArea{grid-template-columns:repeat(3,1fr)}}
+@media print{body{background:white}.no-print,footer{display:none!important}.card{box-shadow:none}}
+</style>
+</head>
+<body><main>
+<header><h1>🎯 Missione Digitazione e Puntatore</h1>
+<p class="muted">Due giochi separati per allenare e osservare le abilità di digitazione e di utilizzo del mouse o del trackpad.</p></header>
+
+<section class="card" id="studentCard">
+<h2>Informazioni dell'alunno</h2>
+<div class="row">
+<div><label for="firstName">Nome</label><input id="firstName" autocomplete="given-name" placeholder="Nome"></div>
+<div><label for="lastName">Cognome</label><input id="lastName" autocomplete="family-name" placeholder="Cognome"></div>
+<div><label for="className">Classe</label><input id="className" placeholder="Es. 2ª B"></div>
+</div>
+<p class="muted">I dati vengono inseriti nel report e restano sul dispositivo: non vengono inviati online.</p>
+</section>
+
+<div class="tabs no-print" aria-label="Seleziona il gioco">
+<button id="tabTyping" aria-pressed="true">⌨️ Gioco 1 · Digitazione</button>
+<button id="tabPointer" aria-pressed="false" class="secondary">🖱️ Gioco 2 · Puntatore e click</button>
+</div>
+
+<section class="card" id="typingSetup">
+<h2>⌨️ Gioco 1 – Digitazione</h2>
+<p>Osserva la parola, scrivila nello spazio e premi Invio. Ogni parola corretta viene conteggiata.</p>
+<label for="typingDuration">Durata della prova</label>
+<select id="typingDuration"><option value="180">3 minuti</option><option value="300">5 minuti</option><option value="480">8 minuti</option><option value="600">10 minuti</option></select>
+<div class="notice">Puoi procedere al tuo ritmo. Se sbagli, non succede nulla: passa alla parola successiva.</div>
+<button id="startTyping">Inizia il gioco di digitazione</button>
+</section>
+
+<section class="card hidden" id="typingGame">
+<div class="row"><div><div class="muted">Tempo rimanente</div><div class="timer" id="typingTimer">03:00</div></div><div><div class="muted">Parole corrette</div><strong style="font-size:2rem" id="typingScore">0</strong></div></div>
+<h2>Scrivi la parola mostrata</h2><div id="prompt">SOLE</div>
+<input id="typingInput" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Scrivi qui..." aria-label="Scrivi la parola mostrata">
+<p id="typingFeedback" class="muted" aria-live="polite">Quando sei pronto, inizia a digitare.</p>
+<div class="stats"><div class="stat"><strong id="typingErrors">0</strong><span>Errori</span></div><div class="stat"><strong id="typingAccuracy">—</strong><span>Precisione</span></div><div class="stat"><strong id="typingWpmLive">0</strong><span>Parole corrette/minuto</span></div></div>
+<button class="secondary" id="stopTyping">Termina la prova</button>
+</section>
+
+<section class="card hidden" id="typingResult">
+<h2>Risultato – Digitazione</h2><div class="stats">
+<div class="stat"><strong id="tWords">0</strong><span>Parole corrette</span></div><div class="stat"><strong id="tWpm">0</strong><span>Parole al minuto</span></div><div class="stat"><strong id="tErrors">0</strong><span>Errori</span></div><div class="stat"><strong id="tAccuracy">—</strong><span>Precisione</span></div><div class="stat"><strong id="tTime">—</strong><span>Tempo svolto</span></div>
+</div><p class="muted">Puoi passare alla seconda attività oppure ripetere questa prova.</p><div class="actions"><button id="repeatTyping" class="secondary">Ripeti digitazione</button><button id="goPointer">Vai al gioco del puntatore</button></div></section>
+
+<section class="card hidden" id="pointerSetup">
+<h2>🖱️ Gioco 2 – Utilizzo del puntatore e click</h2>
+<p>Individua il bersaglio giallo nella griglia e cliccalo. Dopo ogni click corretto, il bersaglio cambia posizione.</p>
+<label for="pointerDuration">Durata della prova</label>
+<select id="pointerDuration"><option value="180">3 minuti</option><option value="300">5 minuti</option><option value="480">8 minuti</option><option value="600">10 minuti</option></select>
+<div class="notice">Clicca solo il bersaglio giallo. Gli altri pulsanti non sono bersagli. Puoi usare il mouse o il trackpad.</div>
+<button id="startPointer">Inizia il gioco del puntatore</button>
+</section>
+
+<section class="card hidden" id="pointerGame">
+<div class="row"><div><div class="muted">Tempo rimanente</div><div class="timer" id="pointerTimer">03:00</div></div><div><div class="muted">Click corretti</div><strong style="font-size:2rem" id="pointerScore">0</strong></div></div>
+<h2>Trova il bersaglio giallo</h2><div id="clickArea"></div><p id="pointerFeedback" class="muted" aria-live="polite">Cerca il bersaglio giallo.</p>
+<div class="stats"><div class="stat"><strong id="pointerCpmLive">0</strong><span>Click corretti/minuto</span></div></div>
+<button class="secondary" id="stopPointer">Termina la prova</button>
+</section>
+
+<section class="card hidden" id="pointerResult">
+<h2>Risultato – Puntatore e click</h2><div class="stats">
+<div class="stat"><strong id="pClicks">0</strong><span>Click corretti</span></div><div class="stat"><strong id="pCpm">0</strong><span>Click al minuto</span></div><div class="stat"><strong id="pTime">—</strong><span>Tempo svolto</span></div>
+</div><p class="muted">La prova del puntatore è indipendente da quella di digitazione.</p><div class="actions"><button id="repeatPointer" class="secondary">Ripeti puntatore</button><button id="showReport">Visualizza report complessivo</button></div></section>
+
+<section class="card hidden" id="finalReport">
+<h2>📋 Report complessivo dell'alunno</h2><div id="report" class="report"></div>
+<div class="actions no-print"><button id="downloadReport">Scarica report (.txt)</button><button class="secondary" id="printReport">Stampa report</button><button class="secondary" id="newStudent">Nuovo alunno</button></div>
+<p class="muted">Il report è uno strumento di osservazione didattica informale: non è un test standardizzato né uno strumento diagnostico.</p>
+</section>
+<footer>Applicazione utilizzabile offline. Per somministrare il gioco a un altro alunno, seleziona “Nuovo alunno” e inserisci i nuovi dati.</footer>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const words=["SOLE","CASA","LUNA","MARE","PANE","GATTO","LIBRO","PALLA","TRENO","FIORE","SCUOLA","AMICO","ALBERO","NUVOLA","STELLA","MATITA","MONTAGNA","FINESTRA","QUADERNO","BICICLETTA"];
+let t={duration:180,remaining:180,start:0,interval:null,active:false,correct:0,errors:0,attempts:0,elapsed:0,done:false};
+let p={duration:180,remaining:180,start:0,interval:null,active:false,clicks:0,elapsed:0,done:false,target:0};
+let reportText="";
+function fmt(s){return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
+function mins(s){return Math.max(s,1)/60}
+function student(){return {first:$("firstName").value.trim(),last:$("lastName").value.trim(),cls:$("className").value.trim()}}
+function validStudent(){let s=student();if(!s.first||!s.last||!s.cls){alert("Inserisci nome, cognome e classe prima di iniziare.");return false}return true}
+function show(id){["typingSetup","typingGame","typingResult","pointerSetup","pointerGame","pointerResult","finalReport"].forEach(x=>$(x).classList.add("hidden"));$(id).classList.remove("hidden")}
+function tabs(which){$("tabTyping").setAttribute("aria-pressed",which==="typing");$("tabPointer").setAttribute("aria-pressed",which==="pointer");$("tabTyping").className=which==="typing"?"":"secondary";$("tabPointer").className=which==="pointer"?"":"secondary"}
+$("tabTyping").onclick=()=>{tabs("typing");show(t.done?"typingResult":"typingSetup")};
+$("tabPointer").onclick=()=>{tabs("pointer");show(p.done?"pointerResult":"pointerSetup")};
+function updateTyping(){
+ $("typingScore").textContent=t.correct;$("typingErrors").textContent=t.errors;
+ $("typingAccuracy").textContent=t.attempts?Math.round(t.correct/t.attempts*100)+"%":"—";
+ $("typingWpmLive").textContent=Math.round(t.correct/mins(t.elapsed));
+}
+function newWord(){$("prompt").textContent=words[Math.floor(Math.random()*words.length)];$("typingInput").value=""}
+function startTyping(){
+ if(!validStudent())return;clearInterval(t.interval);t={duration:+$("typingDuration").value,remaining:+$("typingDuration").value,start:Date.now(),interval:null,active:true,correct:0,errors:0,attempts:0,elapsed:0,done:false};
+ $("typingTimer").textContent=fmt(t.remaining);$("typingFeedback").textContent="Scrivi la parola e premi Invio.";show("typingGame");tabs("typing");newWord();updateTyping();$("typingInput").focus();
+ t.interval=setInterval(()=>{t.elapsed=Math.min(t.duration,Math.floor((Date.now()-t.start)/1000));t.remaining=Math.max(0,t.duration-t.elapsed);$("typingTimer").textContent=fmt(t.remaining);updateTyping();if(!t.remaining)finishTyping()},250);
+}
+$("startTyping").onclick=startTyping;$("repeatTyping").onclick=startTyping;
+$("typingInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&t.active){e.preventDefault();t.attempts++;if($("typingInput").value.trim().toUpperCase()===$("prompt").textContent){t.correct++;$("typingFeedback").textContent="Corretto! Ecco la prossima parola."}else{t.errors++;$("typingFeedback").textContent="Parola diversa: prova con la prossima."}newWord();updateTyping()}});
+function finishTyping(){if(!t.active)return;t.active=false;clearInterval(t.interval);t.elapsed=Math.max(1,Math.min(t.duration,Math.floor((Date.now()-t.start)/1000)));t.done=true;
+$("tWords").textContent=t.correct;$("tWpm").textContent=Math.round(t.correct/mins(t.elapsed));$("tErrors").textContent=t.errors;$("tAccuracy").textContent=t.attempts?Math.round(t.correct/t.attempts*100)+"%":"N/D";$("tTime").textContent=fmt(t.elapsed);show("typingResult")}
+$("stopTyping").onclick=finishTyping;
+$("goPointer").onclick=()=>{tabs("pointer");show("pointerSetup")};
+
+function drawTarget(){let area=$("clickArea");area.innerHTML="";p.target=Math.floor(Math.random()*20);for(let i=0;i<20;i++){let b=document.createElement("button");b.className="target"+(i===p.target?" active":"");b.textContent=i===p.target?"★":["●","◆","▲","■","✚","⬟","♥","☀","✿"][i%9];b.setAttribute("aria-label",i===p.target?"Bersaglio giallo":"Altro simbolo");b.onclick=()=>{if(!p.active)return;if(i===p.target){p.clicks++;$("pointerFeedback").textContent="Bersaglio centrato!";drawTarget();updatePointer()}else{$("pointerFeedback").textContent="Non è il bersaglio. Riprova con calma."}};area.appendChild(b)}}
+function updatePointer(){$("pointerScore").textContent=p.clicks;$("pointerCpmLive").textContent=Math.round(p.clicks/mins(p.elapsed))}
+function startPointer(){if(!validStudent())return;clearInterval(p.interval);p={duration:+$("pointerDuration").value,remaining:+$("pointerDuration").value,start:Date.now(),interval:null,active:true,clicks:0,elapsed:0,done:false,target:0};$("pointerTimer").textContent=fmt(p.remaining);$("pointerFeedback").textContent="Cerca il bersaglio giallo.";show("pointerGame");tabs("pointer");drawTarget();updatePointer();
+p.interval=setInterval(()=>{p.elapsed=Math.min(p.duration,Math.floor((Date.now()-p.start)/1000));p.remaining=Math.max(0,p.duration-p.elapsed);$("pointerTimer").textContent=fmt(p.remaining);updatePointer();if(!p.remaining)finishPointer()},250)}
+$("startPointer").onclick=startPointer;$("repeatPointer").onclick=startPointer;
+function finishPointer(){if(!p.active)return;p.active=false;clearInterval(p.interval);p.elapsed=Math.max(1,Math.min(p.duration,Math.floor((Date.now()-p.start)/1000)));p.done=true;$("pClicks").textContent=p.clicks;$("pCpm").textContent=Math.round(p.clicks/mins(p.elapsed));$("pTime").textContent=fmt(p.elapsed);show("pointerResult")}
+$("stopPointer").onclick=finishPointer;$("showReport").onclick=makeReport;
+function makeReport(){
+ let s=student();let lines=["REPORT – MISSIONE DIGITAZIONE E PUNTATORE","Data: "+new Date().toLocaleString("it-IT"),"Alunno/a: "+s.first+" "+s.last,"Classe: "+s.cls,"","GIOCO 1 – DIGITAZIONE"];
+ if(t.done)lines.push("Durata svolta: "+fmt(t.elapsed),"Parole corrette: "+t.correct,"Parole corrette al minuto: "+Math.round(t.correct/mins(t.elapsed)),"Tentativi: "+t.attempts,"Errori: "+t.errors,"Precisione: "+(t.attempts?Math.round(t.correct/t.attempts*100)+"%":"Non disponibile"));
+ else lines.push("Prova non svolta.");
+ lines.push("","GIOCO 2 – UTILIZZO DEL PUNTATORE E CLICK");
+ if(p.done)lines.push("Durata svolta: "+fmt(p.elapsed),"Click corretti: "+p.clicks,"Click corretti al minuto: "+Math.round(p.clicks/mins(p.elapsed)));
+ else lines.push("Prova non svolta.");
+ lines.push("","Nota: attività ludico-didattica informale. I risultati sono descrittivi e non costituiscono una valutazione clinica o diagnostica.");
+ reportText=lines.join("\n");$("report").textContent=reportText;show("finalReport")
+}
+$("downloadReport").onclick=()=>{let blob=new Blob([reportText],{type:"text/plain;charset=utf-8"});let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="report_"+(student().last||"alunno")+".txt";a.click();URL.revokeObjectURL(a.href)};
+$("printReport").onclick=()=>window.print();
+$("newStudent").onclick=()=>{clearInterval(t.interval);clearInterval(p.interval);t.done=false;p.done=false;$("firstName").value="";$("lastName").value="";$("className").value="";tabs("typing");show("typingSetup");$("firstName").focus()};
+</script></body></html>
