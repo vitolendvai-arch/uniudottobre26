@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Allenamento di digitazione</title>
+<style>
+:root{--ink:#203047;--muted:#607086;--line:#d7e0ea;--blue:#245fbd;--blue2:#eaf2ff;--green:#16794b;--red:#b42318;--bg:#f4f7fb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI, sans-serif}
+header{background:#173b70;color:white;padding:22px max(20px,calc((100% - 1180px)/2))}
+header h1{margin:0 0 4px;font-size:1.55rem}header p{margin:0;color:#e1ebfa}
+main{max-width:1180px;margin:22px auto;padding:0 16px;display:grid;grid-template-columns:minmax(300px,0.9fr) minmax(340px,1.1fr);gap:18px}
+.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 3px 14px #18395b0b}
+h2{font-size:1.12rem;margin:0 0 14px}.field{margin-bottom:12px}label{display:block;font-weight:650;margin-bottom:5px;font-size:.93rem}
+input,textarea,select{width:100%;border:1px solid #bac8d8;border-radius:9px;padding:10px 11px;font:inherit;color:var(--ink);background:white}
+textarea{min-height:210px;resize:vertical}input:focus,textarea:focus,select:focus{outline:3px solid #cfe0ff;border-color:var(--blue)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.timer-options{display:flex;gap:9px;flex-wrap:wrap}
+.timer-options label{border:1px solid var(--line);border-radius:9px;padding:8px 13px;font-weight:600;cursor:pointer}.timer-options input{width:auto;margin-right:5px}
+button{border:0;border-radius:9px;padding:10px 14px;font:inherit;font-weight:650;cursor:pointer;background:var(--blue);color:white}
+button:hover{filter:brightness(.95)}button:disabled{opacity:.45;cursor:not-allowed}.secondary{background:#e9eef5;color:#24364d}.green{background:var(--green)}.red{background:#a83232}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.help{font-size:.87rem;color:var(--muted);margin:7px 0 0}.game-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.clock{font-size:1.65rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--blue)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.stat{background:#f3f6fa;border-radius:10px;padding:10px}.stat small{display:block;color:var(--muted)}.stat strong{font-size:1.25rem;font-variant-numeric:tabular-nums}
+.level{font-size:.88rem;color:var(--muted);margin:12px 0 6px}
+.target{min-height:108px;padding:18px;border:2px solid #c8d8ef;border-radius:12px;background:#f8fbff;font-size:1.65rem;line-height:1.65;overflow-wrap:anywhere;letter-spacing:.02em}
+.target .done{color:var(--green)}.target .current{background:#ffe58a;border-radius:4px}.target .pending{color:#718096}
+.typing{margin-top:12px;min-height:88px;font-size:1.2rem}
+.progress{height:9px;background:#e8edf4;border-radius:99px;overflow:hidden;margin:12px 0}.progress>div{height:100%;background:#2b8a60;width:0%;transition:width .15s}
+.notice{padding:10px 12px;border-radius:9px;background:var(--blue2);color:#244b83;font-size:.9rem;margin-top:12px}
+.result{display:none;margin-top:14px;border:1px solid #b7dfca;background:#f0fbf5;border-radius:10px;padding:13px}
+footer{max-width:1180px;margin:0 auto 28px;padding:0 16px;color:var(--muted);font-size:.82rem}
+@media(max-width:800px){main{grid-template-columns:1fr}.target{font-size:1.35rem}}
+</style>
+</head>
+<body>
+<header><h1>Allenamento di digitazione</h1><p>Un esercizio graduale: dalle singole parole a brevi parti di frase.</p></header>
+<main>
+<section class="panel">
+<h2>1. Prepara l'esercizio</h2>
+<div class="field"><label for="sourceText">Testo di esercitazione</label><textarea id="sourceText" placeholder="Incolla o scrivi qui il testo da utilizzare..."></textarea><p class="help">Il programma ricava le parole dal testo, le trasforma in minuscolo e rimuove la punteggiatura.</p></div>
+<div class="row">
+<div class="field"><label for="firstName">Nome dello studente</label><input id="firstName" autocomplete="off"></div>
+<div class="field"><label for="lastName">Cognome</label><input id="lastName" autocomplete="off"></div>
+</div>
+<div class="field"><label for="className">Classe</label><input id="className" placeholder="Es. 3ª B" autocomplete="off"></div>
+<div class="field"><label>Durata dell'esercizio</label><div class="timer-options">
+<label><input type="radio" name="duration" value="2" checked> 2 minuti</label>
+<label><input type="radio" name="duration" value="3"> 3 minuti</label>
+<label><input type="radio" name="duration" value="5"> 5 minuti</label>
+</div></div>
+<div class="actions">
+<button id="startBtn">Avvia esercizio</button>
+<button class="secondary" id="resetBtn">Azzera</button>
+</div>
+<div class="actions">
+<button class="secondary" id="importBtn">Importa JSON</button>
+<button class="secondary" id="exportBtn">Esporta JSON</button>
+<input type="file" id="jsonFile" accept=".json,application/json" hidden>
+</div>
+<div class="help">Il file JSON salva il testo, i dati dello studente e la durata selezionata, così puoi riutilizzare o trasferire la configurazione.</div>
+</section>
+<section class="panel">
+<div class="game-head"><h2>2. Esercizio di digitazione</h2><div class="clock" id="clock">02:00</div></div>
+<div class="stats">
+<div class="stat"><small>Lettere corrette</small><strong id="correctCount">0</strong></div>
+<div class="stat"><small>Errori</small><strong id="errorCount">0</strong></div>
+<div class="stat"><small>Parole completate</small><strong id="wordCount">0</strong></div>
+</div>
+<div class="level" id="levelLabel">In attesa di avvio</div>
+<div class="target" id="target" aria-live="polite">Inserisci un testo e premi “Avvia esercizio”.</div>
+<div class="progress"><div id="progressBar"></div></div>
+<label for="typingInput">Riscrivi qui la parte evidenziata</label>
+<input id="typingInput" class="typing" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="La casella si attiva quando avvii il gioco..." disabled>
+<div class="notice" id="feedback" aria-live="polite">Suggerimento: osserva la parola evidenziata e digita in minuscolo, senza punteggiatura.</div>
+<div class="actions">
+<button class="secondary" id="pauseBtn" disabled>Pausa</button>
+<button class="red" id="stopBtn" disabled>Termina e crea report</button>
+</div>
+<div class="result" id="result">
+<strong>Sessione terminata.</strong>
+<p id="resultText"></p>
+<button class="green" id="reportBtn">Scarica report</button>
+</div>
+</section>
+</main>
+<footer>Strumento didattico utilizzabile offline. I dati restano sul dispositivo: non vengono inviati a un server. Il conteggio delle lettere corrette considera le lettere e non gli spazi.</footer>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+let words=[], chunks=[], chunkIndex=0, charIndex=0, correct=0, errors=0, completedWords=0;
+let totalSeconds=120, remaining=120, elapsed=0, interval=null, running=false, paused=false, finished=false, reportData=null;
+const normalize = s => s.toLocaleLowerCase('it-IT').normalize('NFC').replace(/[’']/g,'').replace(/[^\p{L}\p{N}]+/gu,'').trim();
+function extractWords(text){
+  return (text.toLocaleLowerCase('it-IT').match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu)||[])
+    .map(w=>w.replace(/[’']/g,'')).filter(Boolean);
+}
+function getDuration(){return Number(document.querySelector('input[name="duration"]:checked').value)*60}
+function formatTime(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function makeChunks(){
+  chunks=[]; let i=0;
+  while(i<words.length){
+    const size = i<5 ? 1 : i<15 ? 2 : i<30 ? 3 : i<50 ? 4 : 5;
+    chunks.push(words.slice(i,i+size)); i+=size;
+  }
+}
+function currentText(){return chunks[chunkIndex]?.join(' ')||''}
+function renderTarget(){
+  const target=currentText(); const done=charIndex;
+  $('target').innerHTML='';
+  const before=document.createElement('span'); before.className='done'; before.textContent=target.slice(0,done);
+  const current=document.createElement('span'); current.className='current'; current.textContent=target.slice(done,done+1)||' ';
+  const after=document.createElement('span'); after.className='pending'; after.textContent=target.slice(done+1);
+  $('target').append(before,current,after);
+  const total=chunks.reduce((n,c)=>n+c.join(' ').length,0);
+  const finishedChars=chunks.slice(0,chunkIndex).reduce((n,c)=>n+c.join(' ').length,0)+charIndex;
+  $('progressBar').style.width=(total?100*finishedChars/total:0)+'%';
+  $('levelLabel').textContent=`Livello ${Math.min(chunkIndex+1,chunks.length)} di ${chunks.length} · ${chunks[chunkIndex]?.length||0} ${chunks[chunkIndex]?.length===1?'parola':'parole'}`;
+}
+function updateStats(){
+  $('correctCount').textContent=correct; $('errorCount').textContent=errors; $('wordCount').textContent=completedWords;
+}
+function start(){
+  if(running) return;
+  const text=$('sourceText').value.trim();
+  words=extractWords(text);
+  if(!words.length){alert('Inserisci prima un testo che contenga almeno una parola.');return}
+  makeChunks(); chunkIndex=0;charIndex=0;correct=0;errors=0;completedWords=0;
+  totalSeconds=getDuration();remaining=totalSeconds;elapsed=0;running=true;paused=false;finished=false;reportData=null;
+  $('clock').textContent=formatTime(remaining);$('typingInput').disabled=false;$('typingInput').value='';$('typingInput').focus();
+  $('startBtn').disabled=true;$('pauseBtn').disabled=false;$('stopBtn').disabled=false;$('result').style.display='none';
+  $('feedback').textContent='Bene! Digita la parte evidenziata. Se sbagli, puoi correggere con Backspace.';
+  renderTarget();updateStats();
+  interval=setInterval(tick,1000);
+}
+function tick(){
+ if(!running||paused)return;
+ remaining--;elapsed++;$('clock').textContent=formatTime(remaining);
+ if(remaining<=0)finish();
+}
+function handleKey(e){
+ if(!running||paused||finished)return;
+ if(e.key==='Tab'||e.key==='Shift'||e.key==='Control'||e.key==='Alt'||e.key==='Meta'||e.key.startsWith('Arrow'))return;
+ e.preventDefault();
+ const target=currentText();
+ if(e.key==='Backspace'){if(charIndex>0){charIndex--;renderTarget()}return}
+ if(e.key.length!==1)return;
+ const expected=target[charIndex];
+ if(e.key.toLocaleLowerCase('it-IT')===expected){
+   charIndex++; if(/\p{L}/u.test(expected||''))correct++;
+   $('feedback').textContent='Corretto! Continua così.';
+   if(charIndex>=target.length){
+     completedWords+=chunks[chunkIndex].length;chunkIndex++;charIndex=0;
+     if(chunkIndex>=chunks.length){$('feedback').textContent='Hai completato tutto il testo!';finish();return}
+     $('feedback').textContent='Ottimo! Passiamo gradualmente alla parte successiva.';
+   }
+ }else{
+   errors++;$('feedback').textContent='Non è la lettera attesa. Osserva il carattere evidenziato e riprova.';
+ }
+ renderTarget();updateStats();
+}
+function finish(){
+ if(finished)return;
+ finished=true;running=false;paused=false;clearInterval(interval);
+ const durationUsed=elapsed;
+ const student={nome:$('firstName').value.trim(),cognome:$('lastName').value.trim(),classe:$('className').value.trim()};
+ reportData={studente:student,durataImpostataMinuti:totalSeconds/60,tempoSvolgimentoSecondi:durationUsed,tempoSvolgimento:formatTime(durationUsed),lettereDigitateCorrettamente:correct,errori:errors,paroleCompletate:completedWords,testoEsercizio:$('sourceText').value, data:new Date().toLocaleString('it-IT')};
+ $('typingInput').disabled=true;$('startBtn').disabled=false;$('pauseBtn').disabled=true;$('stopBtn').disabled=true;
+ $('result').style.display='block';
+ $('resultText').textContent=`${student.nome} ${student.cognome} · ${correct} lettere corrette · ${errors} errori · tempo: ${formatTime(durationUsed)}.`;
+ $('feedback').textContent=remaining===0?'Tempo scaduto.':'Esercizio terminato.';
+ $('clock').textContent=remaining===0?'00:00':formatTime(remaining);
+}
+$('typingInput').addEventListener('keydown',handleKey);
+$('startBtn').addEventListener('click',start);
+$('stopBtn').addEventListener('click',finish);
+$('pauseBtn').addEventListener('click',()=>{
+ if(!running)return;paused=!paused;$('pauseBtn').textContent=paused?'Riprendi':'Pausa';
+ $('feedback').textContent=paused?'Pausa: il timer è fermo.':'Esercizio ripreso.';
+ if(!paused)$('typingInput').focus();
+});
+$('resetBtn').addEventListener('click',()=>{
+ clearInterval(interval);running=false;paused=false;finished=false;reportData=null;
+ $('typingInput').value='';$('typingInput').disabled=true;$('startBtn').disabled=false;$('pauseBtn').disabled=true;$('stopBtn').disabled=true;$('pauseBtn').textContent='Pausa';
+ remaining=getDuration();$('clock').textContent=formatTime(remaining);$('correctCount').textContent='0';$('errorCount').textContent='0';$('wordCount').textContent='0';
+ $('target').textContent='Inserisci un testo e premi “Avvia esercizio”.';$('levelLabel').textContent='In attesa di avvio';$('progressBar').style.width='0%';$('result').style.display='none';$('feedback').textContent='Suggerimento: osserva la parola evidenziata e digita in minuscolo, senza punteggiatura.';
+});
+document.querySelectorAll('input[name="duration"]').forEach(r=>r.addEventListener('change',()=>{if(!running){remaining=getDuration();$('clock').textContent=formatTime(remaining)}}));
+$('reportBtn').addEventListener('click',()=>{
+ if(!reportData)return;
+ const d=reportData;const rows=[
+ ['Report allenamento di digitazione',''],
+ ['Nome',d.studente.nome],['Cognome',d.studente.cognome],['Classe',d.studente.classe],
+ ['Data',d.data],['Durata impostata (minuti)',d.durataImpostataMinuti],
+ ['Tempo di svolgimento',d.tempoSvolgimento],['Tempo di svolgimento (secondi)',d.tempoSvolgimentoSecondi],
+ ['Lettere digitate correttamente',d.lettereDigitateCorrettamente],['Numero di errori',d.errori],['Parole completate',d.paroleCompletate]
+ ];
+ const csv=rows.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
+ download('\ufeff'+csv,'report_digitazione_'+(d.studente.cognome||'studente')+'.csv','text/csv;charset=utf-8');
+});
+function download(content,name,type){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url)}
+$('exportBtn').addEventListener('click',()=>{
+ const data={versione:1,testo:$('sourceText').value,studente:{nome:$('firstName').value,cognome:$('lastName').value,classe:$('className').value},durataMinuti:getDuration()/60};
+ download(JSON.stringify(data,null,2),'configurazione_digitazione.json','application/json');
+});
+$('importBtn').addEventListener('click',()=>$('jsonFile').click());
+$('jsonFile').addEventListener('change',async e=>{
+ const file=e.target.files[0];if(!file)return;
+ try{
+  const data=JSON.parse(await file.text());
+  if(typeof data.testo!=='string'||!data.studente)throw new Error('Formato non riconosciuto');
+  $('sourceText').value=data.testo;$('firstName').value=data.studente.nome||'';$('lastName').value=data.studente.cognome||'';$('className').value=data.studente.classe||'';
+  const mins=[2,3,5].includes(Number(data.durataMinuti))?Number(data.durataMinuti):2;
+  document.querySelector(`input[name="duration"][value="${mins}"]`).checked=true;
+  $('resetBtn').click();alert('Configurazione importata correttamente.');
+ }catch(err){alert('Impossibile importare il file JSON: '+err.message)}
+ e.target.value='';
+});
+})();
+</script>
+</body>
+</html>
